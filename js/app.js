@@ -3,6 +3,7 @@
  * Orchestrates Studio, Pattern Generation, GitHub Publishing, DB, and AR Scanner.
  */
 
+import { CardGenerator } from './card-generator.js';
 import { MindCompiler } from './mind-compiler.js';
 import { PattGenerator } from './patt-generator.js';
 import { GitHubPublisher } from './github-publisher.js';
@@ -66,6 +67,7 @@ class AppController {
             videoPreview: document.getElementById('studio-video-preview'),
 
             btnSaveLocal: document.getElementById('btn-save-local'),
+            btnDownloadCard: document.getElementById('btn-download-card'),
             btnDownloadPatt: document.getElementById('btn-download-patt'),
             btnDownloadFrame: document.getElementById('btn-download-frame'),
             btnLaunchArDirect: document.getElementById('btn-launch-ar-direct'),
@@ -203,6 +205,7 @@ class AppController {
 
         // Studio Buttons
         this.dom.btnSaveLocal.addEventListener('click', () => this.saveCurrentExperienceToDB());
+        this.dom.btnDownloadCard.addEventListener('click', () => this.downloadPrintableCard());
         this.dom.btnDownloadPatt.addEventListener('click', () => this.downloadPattFile());
         this.dom.btnDownloadFrame.addEventListener('click', () => this.downloadFrameImage());
         this.dom.btnLaunchArDirect.addEventListener('click', () => this.launchActiveExperienceAR());
@@ -273,6 +276,7 @@ class AppController {
         const hasVideo = !!this.currentVideoBlobOrUrl;
 
         this.dom.btnSaveLocal.disabled = !(hasTarget && hasVideo);
+        this.dom.btnDownloadCard.disabled = !(hasTarget && hasVideo);
         this.dom.btnDownloadPatt.disabled = !hasTarget;
         this.dom.btnDownloadFrame.disabled = !hasTarget;
         this.dom.btnLaunchArDirect.disabled = !(hasTarget && hasVideo);
@@ -307,6 +311,32 @@ class AppController {
 
         this.renderLibrary();
         this.showToast(`💾 "${title}" saved to local library!`);
+    }
+
+    async downloadPrintableCard() {
+        if (!this.currentImageCanvas || !this.currentVideoBlobOrUrl) return;
+
+        this.showToast('🎴 Generating Printable AR Photo Card...');
+        const title = this.dom.inputExpTitle.value.trim() || 'AR Memory';
+
+        let shareUrl = '';
+        if (this.activeExperience && this.activeExperience.githubUrls && this.activeExperience.githubUrls.shareUrl) {
+            shareUrl = this.activeExperience.githubUrls.shareUrl;
+        } else if (this.currentMindBlobUrl) {
+            shareUrl = this.buildShareableUrl(this.currentMindBlobUrl, this.currentVideoBlobOrUrl, title);
+        }
+
+        try {
+            const cardDataUrl = await CardGenerator.generatePrintableCard(this.currentImageCanvas, shareUrl, title);
+            const link = document.createElement('a');
+            link.href = cardDataUrl;
+            link.download = `${title.replace(/\s+/g, '_')}_AR_Card.png`;
+            link.click();
+            this.showToast('✅ Printable AR Photo Card downloaded successfully!');
+        } catch (err) {
+            console.error(err);
+            this.showToast(`❌ Card Generation Error: ${err.message}`, 'danger');
+        }
     }
 
     downloadPattFile() {
