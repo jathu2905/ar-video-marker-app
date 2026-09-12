@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WebAR Video Marker Studio & Scanner</title>
     
-    <!-- A-Frame and AR.js Libraries -->
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- A-Frame and MindAR Natural Image Tracking Libraries -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image.prod.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -90,17 +91,17 @@
                     </div>
 
                     <div class="preview-container">
-                        <!-- Canvas Marker Preview -->
+                        <!-- Target Photo Preview -->
                         <div style="text-align: center;">
-                            <span class="form-label">AR Marker Preview (Black Border Frame)</span>
-                            <div class="canvas-frame-wrapper">
-                                <canvas id="marker-preview-canvas" width="160" height="160"></canvas>
+                            <span class="form-label">📸 Photo Target Preview (100% Original Quality - No Borders)</span>
+                            <div style="border: 2px solid var(--primary-cyan); border-radius: var(--radius-md); overflow: hidden; background: #000000; display: inline-block; box-shadow: var(--shadow-glow);">
+                                <canvas id="marker-preview-canvas" width="200" height="200"></canvas>
                             </div>
                         </div>
 
                         <!-- Video Preview -->
                         <div style="width: 100%;">
-                            <span class="form-label">Video Preview</span>
+                            <span class="form-label">🎬 Video Preview</span>
                             <div class="video-preview-wrapper">
                                 <video id="studio-video-preview" controls playsinline loop muted></video>
                             </div>
@@ -110,8 +111,8 @@
                         <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
                             <button id="btn-save-local" class="btn btn-primary" disabled>💾 Save Experience to App</button>
                             <div style="display: flex; gap: 8px;">
-                                <button id="btn-download-patt" class="btn btn-outline" disabled>📦 Download .PATT</button>
-                                <button id="btn-download-frame" class="btn btn-outline" disabled>🖼 Download Printable PNG</button>
+                                <button id="btn-download-patt" class="btn btn-outline" disabled>📦 Download .MIND Target</button>
+                                <button id="btn-download-frame" class="btn btn-outline" disabled>🖼 Download High-Res Photo</button>
                             </div>
                             <button id="btn-launch-ar-direct" class="btn btn-success" disabled>🚀 Launch AR Scanner Now</button>
                         </div>

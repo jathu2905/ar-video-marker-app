@@ -15,8 +15,10 @@ class AppController {
 
         // Current active state
         this.currentImageCanvas = null;
-        this.currentPatternString = null;
-        this.currentFramedPngUrl = null;
+        this.currentImageFile = null;
+        this.currentFramedPngUrl = null; // High-res photo Data URL
+        this.currentMindBuffer = null;   // Compiled MindAR target ArrayBuffer
+        this.currentMindBlobUrl = null;  // Blob URL for local scanning
         this.currentVideoBlobOrUrl = null;
         this.currentVideoFile = null;
         this.activeExperience = null;
@@ -35,7 +37,7 @@ class AppController {
         this.loadSavedGitHubSettings();
         this.renderLibrary();
 
-        // Check if opened via Shared Link / QR Code with ?patt=...&video=...
+        // Check if opened via Shared Link / QR Code with ?mind=...&video=...
         this.checkUrlParamsAndAutoLaunch();
 
         this.showToast('✨ WebAR Video Studio Ready!');
@@ -205,35 +207,44 @@ class AppController {
         this.dom.btnLaunchArDirect.addEventListener('click', () => this.launchActiveExperienceAR());
     }
 
-    processImageFile(file) {
+    async processImageFile(file) {
         if (!file.type.startsWith('image/')) {
             this.showToast('⚠️ Please select a valid image file.', 'warning');
             return;
         }
 
+        this.currentImageFile = file;
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
-            img.onload = () => {
+            img.onload = async () => {
                 const canvas = this.dom.markerCanvas;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // Crop & center image squarely
-                const size = Math.min(img.width, img.height);
-                ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, canvas.width, canvas.height);
+                // Draw high-resolution photo on canvas (0 quality loss)
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
                 this.currentImageCanvas = canvas;
-                
-                // Generate Pattern and Framed PNG
-                this.currentPatternString = PattGenerator.generatePattern(canvas);
-                this.currentFramedPngUrl = PattGenerator.generatePrintableFrame(canvas);
+                this.currentFramedPngUrl = e.target.result; // Full resolution photo data URL
 
-                this.dom.imageStatus.innerHTML = `✅ <strong>${file.name}</strong><br><small>AR Marker Pattern Generated!</small>`;
-                this.validateStudioForm();
-                this.showToast('✅ AR Marker Pattern generated successfully!');
+                this.dom.imageStatus.innerHTML = `⏳ <strong>${file.name}</strong><br><small>Compiling MindAR target (100% Quality)...</small>`;
+                this.showToast('⚡ Compiling MindAR natural photo target...');
+
+                try {
+                    const result = await MindCompiler.compileImage(img, (progress) => {
+                        this.dom.imageStatus.innerHTML = `⏳ <strong>${file.name}</strong><br><small>Compiling MindAR target (${progress}%)...</small>`;
+                    });
+                    this.currentMindBuffer = result.buffer;
+                    this.currentMindBlobUrl = result.blobUrl;
+
+                    this.dom.imageStatus.innerHTML = `✅ <strong>${file.name}</strong><br><small>MindAR Target Ready (100% Quality, No Borders)</small>`;
+                    this.validateStudioForm();
+                    this.showToast('✅ High-Resolution Photo Target compiled successfully!');
+                } catch (err) {
+                    console.error(err);
+                    this.showToast(`⚠️ MindAR Compile Error: ${err.message}`, 'warning');
+                }
             };
             img.src = e.target.result;
         };
@@ -257,23 +268,22 @@ class AppController {
     }
 
     validateStudioForm() {
-        const hasMarker = !!this.currentPatternString;
+        const hasTarget = !!this.currentMindBlobUrl;
         const hasVideo = !!this.currentVideoBlobOrUrl;
 
-        this.dom.btnSaveLocal.disabled = !(hasMarker && hasVideo);
-        this.dom.btnDownloadPatt.disabled = !hasMarker;
-        this.dom.btnDownloadFrame.disabled = !hasMarker;
-        this.dom.btnLaunchArDirect.disabled = !(hasMarker && hasVideo);
-        this.dom.btnPublishGh.disabled = !(hasMarker && hasVideo);
+        this.dom.btnSaveLocal.disabled = !(hasTarget && hasVideo);
+        this.dom.btnDownloadPatt.disabled = !hasTarget;
+        this.dom.btnDownloadFrame.disabled = !hasTarget;
+        this.dom.btnLaunchArDirect.disabled = !(hasTarget && hasVideo);
+        this.dom.btnPublishGh.disabled = !(hasTarget && hasVideo);
     }
 
     async saveCurrentExperienceToDB() {
-        if (!this.currentPatternString || !this.currentVideoBlobOrUrl) return;
+        if (!this.currentMindBlobUrl || !this.currentVideoBlobOrUrl) return;
 
         const title = this.dom.inputExpTitle.value.trim() || "Untitled AR Experience";
         const id = 'exp_' + Date.now();
 
-        // Convert video file to ArrayBuffer for persistent IndexedDB storage if needed
         let videoStorageData = this.currentVideoBlobOrUrl;
         if (this.currentVideoFile) {
             videoStorageData = await this.currentVideoFile.arrayBuffer();
@@ -283,7 +293,7 @@ class AppController {
             id: id,
             title: title,
             framedPng: this.currentFramedPngUrl,
-            pattString: this.currentPatternString,
+            mindBuffer: this.currentMindBuffer,
             videoData: videoStorageData,
             videoType: this.currentVideoFile ? this.currentVideoFile.type : 'url',
             isUrl: !this.currentVideoFile,
@@ -299,11 +309,11 @@ class AppController {
     }
 
     downloadPattFile() {
-        if (!this.currentPatternString) return;
-        const blob = new Blob([this.currentPatternString], { type: 'text/plain' });
+        if (!this.currentMindBuffer) return;
+        const blob = new Blob([this.currentMindBuffer], { type: 'application/octet-stream' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'marker.patt';
+        link.download = 'target.mind';
         link.click();
     }
 
@@ -311,7 +321,7 @@ class AppController {
         if (!this.currentFramedPngUrl) return;
         const link = document.createElement('a');
         link.href = this.currentFramedPngUrl;
-        link.download = 'printable-marker-frame.png';
+        link.download = 'photo-frame.png';
         link.click();
     }
 
@@ -340,8 +350,8 @@ class AppController {
         });
 
         this.dom.btnPublishGh.addEventListener('click', async () => {
-            if (!this.currentPatternString || !this.currentVideoBlobOrUrl) {
-                this.showToast('⚠️ Please create an AR marker and upload a video in Studio first.', 'warning');
+            if (!this.currentMindBuffer || !this.currentVideoBlobOrUrl) {
+                this.showToast('⚠️ Please upload a photo & video in Studio first.', 'warning');
                 return;
             }
 
@@ -357,19 +367,19 @@ class AppController {
 
             try {
                 this.saveGitHubSettings();
-                this.showToast('📤 Uploading AR assets to GitHub repository...');
+                this.showToast('📤 Uploading High-Res MindAR target & video to GitHub...');
                 this.dom.btnPublishGh.disabled = true;
 
                 const timestamp = Date.now();
-                const pattPath = `ar-markers/marker_${timestamp}.patt`;
+                const mindPath = `ar-targets/target_${timestamp}.mind`;
                 const videoPath = `ar-videos/video_${timestamp}.mp4`;
 
-                // 1. Upload .patt file
-                const pattRes = await GitHubPublisher.uploadFile({
+                // 1. Upload .mind file
+                const mindRes = await GitHubPublisher.uploadFile({
                     token, owner, repo, branch,
-                    path: pattPath,
-                    content: this.currentPatternString,
-                    message: `Upload AR Pattern marker_${timestamp}.patt`
+                    path: mindPath,
+                    content: this.currentMindBuffer,
+                    message: `Upload MindAR Target target_${timestamp}.mind`
                 });
 
                 // 2. Upload Video file (if File or ArrayBuffer)
@@ -387,7 +397,7 @@ class AppController {
 
                 // Show Results UI
                 this.dom.ghOutputCard.classList.remove('hidden');
-                this.dom.ghResPatt.value = pattRes.rawUrl;
+                this.dom.ghResPatt.value = mindRes.rawUrl;
                 this.dom.ghResVideo.value = videoRawUrl;
 
                 // Generate Shareable WebAR Link & QR Code

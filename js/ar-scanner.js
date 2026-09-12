@@ -1,6 +1,6 @@
 /**
- * WebAR Camera Scanner Manager
- * Handles A-Frame + AR.js scene injection, marker tracking events, and 3D video playback.
+ * MindAR Natural Photo Frame Camera Scanner Manager
+ * Tracks high-res photos without quality reduction or black borders, and automatically plays videos over photo frames.
  */
 
 export class ARScanner {
@@ -8,15 +8,14 @@ export class ARScanner {
         this.container = containerElement;
         this.activeScene = null;
         this.videoElement = null;
-        this.markerElement = null;
         this.isScanning = false;
     }
 
     /**
-     * Initializes the WebAR Camera Scene.
-     * @param {Object} config - { pattUrl, videoSrcUrl, aspectWidth = 1, aspectHeight = 1 }
+     * Initializes the MindAR WebAR Camera Scene.
+     * @param {Object} config - { mindUrl, videoSrcUrl, videoTitle = "AR Video" }
      */
-    startScanner({ pattUrl, videoSrcUrl, videoTitle = "AR Video" }) {
+    startScanner({ mindUrl, videoSrcUrl, videoTitle = "AR Video" }) {
         this.stopScanner();
 
         // 1. Create Control Overlay UI
@@ -26,7 +25,7 @@ export class ARScanner {
         hudOverlay.innerHTML = `
             <div class="ar-status-badge searching" id="ar-status-badge">
                 <span class="pulse-dot"></span>
-                <span id="ar-status-text">📷 Searching for Marker...</span>
+                <span id="ar-status-text">📷 Point camera at your photo frame...</span>
             </div>
 
             <div class="ar-unmute-prompt hidden" id="ar-unmute-prompt">
@@ -36,13 +35,12 @@ export class ARScanner {
             <div class="ar-control-bar">
                 <button id="ar-btn-toggle-play" class="hud-btn">⏸ Pause</button>
                 <button id="ar-btn-toggle-mute" class="hud-btn">🔊 Mute</button>
-                <button id="ar-btn-reset-transform" class="hud-btn">🔄 Center</button>
                 <button id="ar-btn-close-scanner" class="hud-btn btn-danger">✖ Close AR</button>
             </div>
         `;
         this.container.appendChild(hudOverlay);
 
-        // 2. Inject A-Frame AR.js Scene HTML
+        // 2. Inject MindAR A-Frame Scene HTML
         const sceneContainer = document.createElement('div');
         sceneContainer.id = 'aframe-scene-wrapper';
         sceneContainer.className = 'aframe-scene-wrapper';
@@ -50,11 +48,13 @@ export class ARScanner {
         sceneContainer.innerHTML = `
             <a-scene 
                 embedded 
-                arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; patternRatio: 0.50;"
-                renderer="logarithmicDepthBuffer: true; colorManagement: true;"
-                vr-mode-ui="enabled: false">
+                mindar-image="imageTargetSrc: ${mindUrl}; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;"
+                color-space="sRGB" 
+                renderer="colorManagement: true, physicallyCorrectLights" 
+                vr-mode-ui="enabled: false" 
+                device-orientation-permission-ui="enabled: false">
                 
-                <a-assets timeout="10000">
+                <a-assets>
                     <video 
                         id="ar-video-asset" 
                         src="${videoSrcUrl}" 
@@ -66,61 +66,52 @@ export class ARScanner {
                     </video>
                 </a-assets>
 
-                <a-marker 
-                    id="ar-marker-target" 
-                    type="pattern" 
-                    url="${pattUrl}"
-                    patternRatio="0.50"
-                    emitevents="true">
-                    
-                    <!-- Video Plane overlaid on marker -->
+                <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+                <a-entity mindar-image-target="targetIndex: 0" id="ar-target-entity">
+                    <!-- Video Plane overlaid on photo frame -->
                     <a-video 
                         id="ar-video-plane"
                         src="#ar-video-asset" 
-                        position="0 0.1 0" 
-                        rotation="-90 0 0" 
-                        width="1.6" 
-                        height="1.2">
+                        position="0 0 0" 
+                        rotation="0 0 0" 
+                        width="1" 
+                        height="1">
                     </a-video>
-
-                </a-marker>
-
-                <a-entity camera></a-entity>
+                </a-entity>
             </a-scene>
         `;
         this.container.appendChild(sceneContainer);
 
         this.activeScene = sceneContainer.querySelector('a-scene');
         this.videoElement = document.getElementById('ar-video-asset');
-        this.markerElement = document.getElementById('ar-marker-target');
+        const targetEntity = document.getElementById('ar-target-entity');
         const videoPlane = document.getElementById('ar-video-plane');
 
         // Adjust video plane aspect ratio once metadata loads
         this.videoElement.addEventListener('loadedmetadata', () => {
             if (this.videoElement.videoWidth && this.videoElement.videoHeight) {
                 const ratio = this.videoElement.videoHeight / this.videoElement.videoWidth;
-                const baseWidth = 1.6;
-                videoPlane.setAttribute('width', baseWidth);
-                videoPlane.setAttribute('height', (baseWidth * ratio).toFixed(3));
+                videoPlane.setAttribute('width', '1');
+                videoPlane.setAttribute('height', ratio.toFixed(3));
             }
         });
 
-        // 3. Attach Marker Event Listeners
+        // 3. Attach MindAR Event Listeners
         const statusBadge = document.getElementById('ar-status-badge');
         const statusText = document.getElementById('ar-status-text');
         const unmutePrompt = document.getElementById('ar-unmute-prompt');
         const playBtn = document.getElementById('ar-btn-toggle-play');
         const muteBtn = document.getElementById('ar-btn-toggle-mute');
 
-        this.markerElement.addEventListener('markerFound', () => {
+        targetEntity.addEventListener('targetFound', () => {
             statusBadge.className = 'ar-status-badge detected';
-            statusText.innerText = '✅ Marker Detected!';
+            statusText.innerText = '✅ Photo Frame Detected!';
             
             // Try to play video
             const playPromise = this.videoElement.play();
             if (playPromise !== undefined) {
                 playPromise.catch(() => {
-                    // Muted auto-play fallback for mobile browsers
                     this.videoElement.muted = true;
                     this.videoElement.play();
                     unmutePrompt.classList.remove('hidden');
@@ -129,9 +120,9 @@ export class ARScanner {
             }
         });
 
-        this.markerElement.addEventListener('markerLost', () => {
+        targetEntity.addEventListener('targetLost', () => {
             statusBadge.className = 'ar-status-badge searching';
-            statusText.innerText = '📷 Searching for Marker...';
+            statusText.innerText = '📷 Point camera at your photo frame...';
             this.videoElement.pause();
         });
 
@@ -158,11 +149,6 @@ export class ARScanner {
             if (!this.videoElement.muted) {
                 unmutePrompt.classList.add('hidden');
             }
-        });
-
-        document.getElementById('ar-btn-reset-transform').addEventListener('click', () => {
-            videoPlane.setAttribute('position', '0 0.1 0');
-            videoPlane.setAttribute('rotation', '-90 0 0');
         });
 
         document.getElementById('ar-btn-close-scanner').addEventListener('click', () => {
