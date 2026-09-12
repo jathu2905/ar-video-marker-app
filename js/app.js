@@ -3,6 +3,7 @@
  * Orchestrates Studio, Pattern Generation, GitHub Publishing, DB, and AR Scanner.
  */
 
+import { MindCompiler } from './mind-compiler.js';
 import { PattGenerator } from './patt-generator.js';
 import { GitHubPublisher } from './github-publisher.js';
 import { ARDatabase } from './db.js';

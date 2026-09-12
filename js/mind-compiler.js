@@ -11,8 +11,17 @@ export class MindCompiler {
      * @returns {Promise<{ buffer: ArrayBuffer, blobUrl: string }>}
      */
     static async compileImage(imageElement, onProgress = null) {
+        // Ensure MINDAR library is present or wait for CDN script to finish loading
         if (!window.MINDAR || !window.MINDAR.IMAGE || !window.MINDAR.IMAGE.Compiler) {
-            throw new Error('MindAR Compiler library is not loaded.');
+            let attempts = 0;
+            while ((!window.MINDAR || !window.MINDAR.IMAGE || !window.MINDAR.IMAGE.Compiler) && attempts < 30) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+        }
+
+        if (!window.MINDAR || !window.MINDAR.IMAGE || !window.MINDAR.IMAGE.Compiler) {
+            throw new Error('MindAR Compiler library is still loading. Please wait a moment and re-select your photo.');
         }
 
         const compiler = new window.MINDAR.IMAGE.Compiler();
