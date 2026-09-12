@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WebAR Video Marker Studio & Scanner</title>
+    
+    <!-- A-Frame and AR.js Libraries -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="brand">
+            <div class="brand-logo">📐</div>
+            <div>
+                <span class="brand-title">AR Video Studio</span>
+                <span class="brand-badge">v2.0 WebAR</span>
+            </div>
+        </div>
+
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="tab-studio">🛠 Studio</button>
+            <button class="tab-btn" data-tab="tab-github">☁️ GitHub Storage</button>
+            <button class="tab-btn" data-tab="tab-scanner">📷 AR Scanner</button>
+            <button class="tab-btn" data-tab="tab-library">📁 My Experiences</button>
+        </nav>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- TAB 1: STUDIO -->
+        <section id="tab-studio" class="tab-content active">
+            <div class="studio-grid">
+                
+                <!-- Left Column: Asset Uploads & Marker Generation -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">1️⃣ Upload Target Image & Video</h3>
+                    </div>
+
+                    <!-- Target Image Upload -->
+                    <div class="form-group">
+                        <label class="form-label">📸 Target Image (Generates AR Marker)</label>
+                        <div class="upload-dropzone" id="image-dropzone">
+                            <div class="upload-icon">🖼️</div>
+                            <div class="upload-text" id="image-upload-status">
+                                Drag & drop photo or <highlight>Click to Browse</highlight><br>
+                                <small>(Supports JPG, PNG, WEBP)</small>
+                            </div>
+                            <input type="file" id="input-image" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+
+                    <!-- Video Upload or URL -->
+                    <div class="form-group">
+                        <label class="form-label">🎬 Overlay Video (Plays when AR marker is scanned)</label>
+                        <div class="upload-dropzone" id="video-dropzone">
+                            <div class="upload-icon">🎥</div>
+                            <div class="upload-text" id="video-upload-status">
+                                Drag & drop video or <highlight>Click to Browse</highlight><br>
+                                <small>(MP4 / WebM video file)</small>
+                            </div>
+                            <input type="file" id="input-video" accept="video/mp4,video/webm" style="display: none;">
+                        </div>
+                        
+                        <div style="margin-top: 10px;">
+                            <label class="form-label">... or Hosted Video URL (CORS compliant):</label>
+                            <input type="text" id="input-video-url" class="form-input" placeholder="https://raw.githubusercontent.com/.../video.mp4">
+                            <button id="btn-check-cors" class="btn btn-outline" style="margin-top: 6px; padding: 6px 12px; font-size: 12px;">🔍 Check CORS Policy</button>
+                        </div>
+                    </div>
+
+                    <!-- Experience Metadata -->
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label class="form-label">🏷️ Experience Title</label>
+                        <input type="text" id="input-exp-title" class="form-input" value="My AR Video Experience">
+                    </div>
+                </div>
+
+                <!-- Right Column: Marker & Video Previews & Export -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">2️⃣ Marker & Video Preview</h3>
+                    </div>
+
+                    <div class="preview-container">
+                        <!-- Canvas Marker Preview -->
+                        <div style="text-align: center;">
+                            <span class="form-label">AR Marker Preview (Black Border Frame)</span>
+                            <div class="canvas-frame-wrapper">
+                                <canvas id="marker-preview-canvas" width="160" height="160"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Video Preview -->
+                        <div style="width: 100%;">
+                            <span class="form-label">Video Preview</span>
+                            <div class="video-preview-wrapper">
+                                <video id="studio-video-preview" controls playsinline loop muted></video>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+                            <button id="btn-save-local" class="btn btn-primary" disabled>💾 Save Experience to App</button>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="btn-download-patt" class="btn btn-outline" disabled>📦 Download .PATT</button>
+                                <button id="btn-download-frame" class="btn btn-outline" disabled>🖼 Download Printable PNG</button>
+                            </div>
+                            <button id="btn-launch-ar-direct" class="btn btn-success" disabled>🚀 Launch AR Scanner Now</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: GITHUB STORAGE & PUBLISHING -->
+        <section id="tab-github" class="tab-content">
+            <div class="card" style="max-width: 680px; margin: 0 auto;">
+                <div class="card-header">
+                    <h3 class="card-title">☁️ Publish AR Experience to GitHub</h3>
+                </div>
+                
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6;">
+                    Upload your <code>.patt</code> pattern file and <code>.mp4</code> video file directly to your GitHub repository. 
+                    Files stored on GitHub Raw or GitHub Pages are automatically <strong>CORS-compliant</strong> and accessible globally by anyone scanning your AR marker!
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">🔑 GitHub Personal Access Token (PAT)</label>
+                    <input type="password" id="gh-token" class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx">
+                    <small style="color: var(--text-dim); font-size: 11px; display: block; margin-top: 4px;">
+                        Requires <code>repo</code> scope permission to upload assets.
+                    </small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">👤 GitHub Username / Owner</label>
+                        <input type="text" id="gh-owner" class="form-input" placeholder="your-username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📦 Repository Name</label>
+                        <input type="text" id="gh-repo" class="form-input" placeholder="my-ar-markers">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">🌿 Branch Name</label>
+                    <input type="text" id="gh-branch" class="form-input" value="main">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button id="btn-test-gh" class="btn btn-outline">⚡ Test GitHub Connection</button>
+                    <button id="btn-publish-gh" class="btn btn-primary" disabled>📤 Publish Experience to GitHub</button>
+                </div>
+
+                <!-- GitHub Upload Status Output -->
+                <div id="gh-output-card" class="card hidden" style="margin-top: 20px; background: rgba(0,0,0,0.4);">
+                    <h4 style="font-size: 14px; color: var(--success-green); margin-bottom: 8px;">✅ Successfully Published to GitHub!</h4>
+                    <div class="form-group">
+                        <label class="form-label">Hosted Marker Raw URL:</label>
+                        <input type="text" id="gh-res-patt" class="form-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hosted Video Raw URL:</label>
+                        <input type="text" id="gh-res-video" class="form-input" readonly>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: AR SCANNER -->
+        <section id="tab-scanner" class="tab-content">
+            <div class="card" style="padding: 12px;">
+                <div class="scanner-viewport" id="scanner-viewport">
+                    <div style="display: grid; place-items: center; height: 100%; text-align: center; color: var(--text-muted);">
+                        <div>
+                            <div style="font-size: 48px; margin-bottom: 12px;">📷</div>
+                            <h3>AR Scanner is Offline</h3>
+                            <p style="font-size: 14px; margin-top: 6px;">Select an experience from Studio or My Experiences to start scanning!</p>
+                            <button id="btn-start-scanner-idle" class="btn btn-primary" style="margin-top: 16px; max-width: 260px;">🚀 Start Scanner with Active AR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: MY EXPERIENCES LIBRARY -->
+        <section id="tab-library" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📁 Saved AR Experiences</h3>
+                    <button id="btn-refresh-library" class="btn btn-outline" style="width: auto; padding: 6px 14px; font-size: 13px;">🔄 Refresh</button>
+                </div>
+
+                <div id="experiences-list-container" class="experiences-grid">
+                    <!-- Dynamic Experience Cards Injected Here -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Main Controller JS Module -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
