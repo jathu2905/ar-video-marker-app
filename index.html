@@ -179,13 +179,14 @@
                         <div style="display: flex; gap: 8px;">
                             <input type="text" id="gh-res-shareurl" class="form-input" readonly>
                             <button id="btn-copy-shareurl" class="btn btn-outline" style="width: auto; margin: 0; padding: 8px 16px;">📋 Copy</button>
+                            <button id="btn-show-qrcode" class="btn btn-primary" style="width: auto; margin: 0; padding: 8px 16px;">📱 Show QR</button>
                         </div>
                     </div>
 
-                    <div style="text-align: center; margin-top: 16px;">
-                        <span class="form-label">📱 Scan QR Code with Phone B to Open Scanner Directly:</span>
-                        <div style="margin-top: 8px;">
-                            <img id="gh-res-qrcode" src="" alt="AR Experience QR Code" style="width: 160px; height: 160px; border-radius: 12px; border: 2px solid var(--primary-cyan); background: #ffffff; padding: 6px; display: inline-block;">
+                    <div id="qrcode-wrapper" style="text-align: center; margin-top: 16px;">
+                        <span class="form-label" style="display: block; margin-bottom: 6px;">📱 Scan QR Code with Phone B to Open Scanner Directly:</span>
+                        <div style="display: inline-block;">
+                            <img id="gh-res-qrcode" src="" alt="AR Experience QR Code" style="width: 200px; height: 200px; border-radius: 12px; border: 2px solid var(--primary-cyan); background: #ffffff; padding: 8px; margin: 0 auto;">
                         </div>
                     </div>
                 </div>

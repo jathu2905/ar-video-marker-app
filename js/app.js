@@ -79,6 +79,7 @@ class AppController {
             ghResVideo: document.getElementById('gh-res-video'),
             ghResShareUrl: document.getElementById('gh-res-shareurl'),
             btnCopyShareUrl: document.getElementById('btn-copy-shareurl'),
+            btnShowQrCode: document.getElementById('btn-show-qrcode'),
             ghResQrCode: document.getElementById('gh-res-qrcode'),
 
             // Scanner tab
@@ -394,8 +395,7 @@ class AppController {
                 const shareUrl = this.buildShareableUrl(pattRes.rawUrl, videoRawUrl, title);
                 this.dom.ghResShareUrl.value = shareUrl;
 
-                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(shareUrl)}`;
-                this.dom.ghResQrCode.src = qrApiUrl;
+                this.renderQrCodeImage(shareUrl);
 
                 // Update Active Experience with GitHub URLs
                 if (!this.activeExperience) {
@@ -429,25 +429,61 @@ class AppController {
                 this.showToast('📋 Shareable WebAR Link copied to clipboard!');
             }
         });
+
+        // Manual Show QR Code button handler
+        if (this.dom.btnShowQrCode) {
+            this.dom.btnShowQrCode.addEventListener('click', () => {
+                const url = this.dom.ghResShareUrl.value || this.dom.inputLoadShareUrl.value.trim();
+                if (url) {
+                    this.renderQrCodeImage(url);
+                    this.showToast('📱 QR Code Generated!');
+                } else {
+                    this.showToast('⚠️ No Share URL available to generate QR code.', 'warning');
+                }
+            });
+        }
+    }
+
+    renderQrCodeImage(shareUrl) {
+        if (!shareUrl || !this.dom.ghResQrCode) return;
+        const encoded = encodeURIComponent(shareUrl);
+
+        const primary = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}`;
+        const fallback1 = `https://quickchart.io/qr?text=${encoded}&size=300`;
+        const fallback2 = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encoded}`;
+
+        const img = this.dom.ghResQrCode;
+        img.onerror = () => {
+            if (img.src.includes('qrserver.com')) {
+                img.src = fallback1;
+            } else if (img.src.includes('quickchart.io')) {
+                img.src = fallback2;
+            }
+        };
+        img.src = primary;
     }
 
     buildShareableUrl(pattUrl, videoUrl, title = 'AR Experience') {
-        let baseUrl = `${window.location.origin}${window.location.pathname}`;
+        let baseUrl = 'https://jathu2905.github.io/ar-video-marker-app/';
 
-        // Handle local file system protocol (file://) or null origin fallback to GitHub Pages
-        if (window.location.protocol === 'file:' || window.location.origin === 'null') {
-            const owner = this.dom.ghOwner ? this.dom.ghOwner.value.trim() : '';
-            const repo = this.dom.ghRepo ? this.dom.ghRepo.value.trim() : '';
-            if (owner && repo) {
+        try {
+            if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                baseUrl = `${window.location.origin}${window.location.pathname}`;
+            } else {
+                const owner = (this.dom.ghOwner && this.dom.ghOwner.value.trim()) || 'jathu2905';
+                const repo = (this.dom.ghRepo && this.dom.ghRepo.value.trim()) || 'ar-video-marker-app';
                 baseUrl = `https://${owner}.github.io/${repo}/`;
             }
-        }
 
-        const url = new URL(baseUrl);
-        url.searchParams.set('patt', pattUrl);
-        url.searchParams.set('video', videoUrl);
-        url.searchParams.set('title', title);
-        return url.toString();
+            const url = new URL(baseUrl);
+            url.searchParams.set('patt', pattUrl);
+            url.searchParams.set('video', videoUrl);
+            url.searchParams.set('title', title);
+            return url.toString();
+        } catch (e) {
+            console.error('Error generating share URL:', e);
+            return `https://jathu2905.github.io/ar-video-marker-app/?patt=${encodeURIComponent(pattUrl)}&video=${encodeURIComponent(videoUrl)}&title=${encodeURIComponent(title)}`;
+        }
     }
 
     checkUrlParamsAndAutoLaunch() {
