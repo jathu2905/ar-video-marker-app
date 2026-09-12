@@ -35,6 +35,9 @@ class AppController {
         this.loadSavedGitHubSettings();
         this.renderLibrary();
 
+        // Check if opened via Shared Link / QR Code with ?patt=...&video=...
+        this.checkUrlParamsAndAutoLaunch();
+
         this.showToast('✨ WebAR Video Studio Ready!');
     }
 
@@ -74,10 +77,15 @@ class AppController {
             ghOutputCard: document.getElementById('gh-output-card'),
             ghResPatt: document.getElementById('gh-res-patt'),
             ghResVideo: document.getElementById('gh-res-video'),
+            ghResShareUrl: document.getElementById('gh-res-shareurl'),
+            btnCopyShareUrl: document.getElementById('btn-copy-shareurl'),
+            ghResQrCode: document.getElementById('gh-res-qrcode'),
 
             // Scanner tab
             scannerViewport: document.getElementById('scanner-viewport'),
             btnStartScannerIdle: document.getElementById('btn-start-scanner-idle'),
+            inputLoadShareUrl: document.getElementById('input-load-share-url'),
+            btnLoadShareUrl: document.getElementById('btn-load-share-url'),
 
             // Library tab
             btnRefreshLibrary: document.getElementById('btn-refresh-library'),
@@ -381,6 +389,14 @@ class AppController {
                 this.dom.ghResPatt.value = pattRes.rawUrl;
                 this.dom.ghResVideo.value = videoRawUrl;
 
+                // Generate Shareable WebAR Link & QR Code
+                const title = this.dom.inputExpTitle.value.trim() || 'AR Experience';
+                const shareUrl = this.buildShareableUrl(pattRes.rawUrl, videoRawUrl, title);
+                this.dom.ghResShareUrl.value = shareUrl;
+
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(shareUrl)}`;
+                this.dom.ghResQrCode.src = qrApiUrl;
+
                 // Update Active Experience with GitHub URLs
                 if (!this.activeExperience) {
                     await this.saveCurrentExperienceToDB();
@@ -389,7 +405,8 @@ class AppController {
                 if (this.activeExperience) {
                     this.activeExperience.githubUrls = {
                         pattUrl: pattRes.rawUrl,
-                        videoUrl: videoRawUrl
+                        videoUrl: videoRawUrl,
+                        shareUrl: shareUrl
                     };
                     await this.db.saveExperience(this.activeExperience);
                     this.renderLibrary();
@@ -403,6 +420,53 @@ class AppController {
                 this.dom.btnPublishGh.disabled = false;
             }
         });
+
+        // Copy Share URL handler
+        this.dom.btnCopyShareUrl.addEventListener('click', () => {
+            const url = this.dom.ghResShareUrl.value;
+            if (url) {
+                navigator.clipboard.writeText(url);
+                this.showToast('📋 Shareable WebAR Link copied to clipboard!');
+            }
+        });
+    }
+
+    buildShareableUrl(pattUrl, videoUrl, title = 'AR Experience') {
+        let baseUrl = `${window.location.origin}${window.location.pathname}`;
+
+        // Handle local file system protocol (file://) or null origin fallback to GitHub Pages
+        if (window.location.protocol === 'file:' || window.location.origin === 'null') {
+            const owner = this.dom.ghOwner ? this.dom.ghOwner.value.trim() : '';
+            const repo = this.dom.ghRepo ? this.dom.ghRepo.value.trim() : '';
+            if (owner && repo) {
+                baseUrl = `https://${owner}.github.io/${repo}/`;
+            }
+        }
+
+        const url = new URL(baseUrl);
+        url.searchParams.set('patt', pattUrl);
+        url.searchParams.set('video', videoUrl);
+        url.searchParams.set('title', title);
+        return url.toString();
+    }
+
+    checkUrlParamsAndAutoLaunch() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pattUrl = urlParams.get('patt');
+        const videoUrl = urlParams.get('video');
+        const title = urlParams.get('title') || 'Shared AR Experience';
+
+        if (pattUrl && videoUrl) {
+            setTimeout(() => {
+                this.switchTab('tab-scanner');
+                this.scanner.startScanner({
+                    pattUrl: decodeURIComponent(pattUrl),
+                    videoSrcUrl: decodeURIComponent(videoUrl),
+                    videoTitle: decodeURIComponent(title)
+                });
+                this.showToast(`📷 Auto-loaded AR Experience: "${title}"`);
+            }, 500);
+        }
     }
 
     async saveGitHubSettings() {
@@ -431,9 +495,43 @@ class AppController {
         this.dom.btnStartScannerIdle.addEventListener('click', () => {
             if (this.currentPatternString && this.currentVideoBlobOrUrl) {
                 this.launchActiveExperienceAR();
+            } else if (this.activeExperience) {
+                this.launchActiveExperienceAR(this.activeExperience);
             } else {
-                this.showToast('⚠️ Please upload a photo & video in Studio tab first.', 'warning');
-                this.switchTab('tab-studio');
+                this.showToast('⚠️ No active local experience. Paste a share URL below or create one in Studio.', 'warning');
+            }
+        });
+
+        this.dom.btnLoadShareUrl.addEventListener('click', () => {
+            const rawInput = this.dom.inputLoadShareUrl.value.trim();
+            if (!rawInput) {
+                this.showToast('⚠️ Please paste a Share Link or Published URL.', 'warning');
+                return;
+            }
+
+            try {
+                let pattUrl = '', videoUrl = '', title = 'Remote AR Experience';
+
+                if (rawInput.includes('patt=') && rawInput.includes('video=')) {
+                    const urlObj = new URL(rawInput);
+                    pattUrl = urlObj.searchParams.get('patt');
+                    videoUrl = urlObj.searchParams.get('video');
+                    title = urlObj.searchParams.get('title') || title;
+                }
+
+                if (pattUrl && videoUrl) {
+                    this.switchTab('tab-scanner');
+                    this.scanner.startScanner({
+                        pattUrl: decodeURIComponent(pattUrl),
+                        videoSrcUrl: decodeURIComponent(videoUrl),
+                        videoTitle: decodeURIComponent(title)
+                    });
+                    this.showToast(`🚀 Loaded and launched AR Scanner for "${title}"!`);
+                } else {
+                    this.showToast('❌ Could not parse Share Link. Ensure it has ?patt=...&video=...', 'danger');
+                }
+            } catch (err) {
+                this.showToast(`❌ Invalid URL: ${err.message}`, 'danger');
             }
         });
     }
@@ -516,6 +614,7 @@ class AppController {
                     </div>
                     <div class="exp-card-actions">
                         <button class="btn btn-primary btn-launch-exp" style="padding: 6px 12px; font-size: 12px;">🚀 Launch AR</button>
+                        ${hasGh ? `<button class="btn btn-outline btn-share-exp" style="padding: 6px 12px; font-size: 12px;">🔗 Share</button>` : ''}
                         <button class="btn btn-outline btn-dl-exp" style="padding: 6px 12px; font-size: 12px;">📦 .PATT</button>
                         <button class="btn btn-danger btn-del-exp" style="padding: 6px 12px; font-size: 12px;">🗑 Delete</button>
                     </div>
@@ -525,6 +624,14 @@ class AppController {
             card.querySelector('.btn-launch-exp').addEventListener('click', () => {
                 this.launchActiveExperienceAR(exp);
             });
+
+            if (hasGh) {
+                card.querySelector('.btn-share-exp').addEventListener('click', () => {
+                    const shareUrl = exp.githubUrls.shareUrl || this.buildShareableUrl(exp.githubUrls.pattUrl, exp.githubUrls.videoUrl, exp.title);
+                    navigator.clipboard.writeText(shareUrl);
+                    this.showToast(`📋 Share link for "${exp.title}" copied to clipboard!`);
+                });
+            }
 
             card.querySelector('.btn-dl-exp').addEventListener('click', () => {
                 const blob = new Blob([exp.pattString], { type: 'text/plain' });

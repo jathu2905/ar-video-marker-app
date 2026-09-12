@@ -50,7 +50,7 @@ export class ARScanner {
         sceneContainer.innerHTML = `
             <a-scene 
                 embedded 
-                arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+                arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; patternRatio: 0.50;"
                 renderer="logarithmicDepthBuffer: true; colorManagement: true;"
                 vr-mode-ui="enabled: false">
                 
@@ -70,6 +70,7 @@ export class ARScanner {
                     id="ar-marker-target" 
                     type="pattern" 
                     url="${pattUrl}"
+                    patternRatio="0.50"
                     emitevents="true">
                     
                     <!-- Video Plane overlaid on marker -->

@@ -173,6 +173,21 @@
                         <label class="form-label">Hosted Video Raw URL:</label>
                         <input type="text" id="gh-res-video" class="form-input" readonly>
                     </div>
+
+                    <div class="form-group" style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-glass);">
+                        <label class="form-label" style="color: var(--primary-cyan); font-weight: 700;">🔗 Shareable WebAR Link (Open on Phone to Scan):</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="gh-res-shareurl" class="form-input" readonly>
+                            <button id="btn-copy-shareurl" class="btn btn-outline" style="width: auto; margin: 0; padding: 8px 16px;">📋 Copy</button>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 16px;">
+                        <span class="form-label">📱 Scan QR Code with Phone B to Open Scanner Directly:</span>
+                        <div style="margin-top: 8px;">
+                            <img id="gh-res-qrcode" src="" alt="AR Experience QR Code" style="width: 160px; height: 160px; border-radius: 12px; border: 2px solid var(--primary-cyan); background: #ffffff; padding: 6px; display: inline-block;">
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -181,14 +196,38 @@
         <section id="tab-scanner" class="tab-content">
             <div class="card" style="padding: 12px;">
                 <div class="scanner-viewport" id="scanner-viewport">
-                    <div style="display: grid; place-items: center; height: 100%; text-align: center; color: var(--text-muted);">
-                        <div>
+                    <div style="display: grid; place-items: center; height: 100%; text-align: center; color: var(--text-muted); padding: 20px;">
+                        <div style="max-width: 480px; width: 100%;">
                             <div style="font-size: 48px; margin-bottom: 12px;">📷</div>
-                            <h3>AR Scanner is Offline</h3>
-                            <p style="font-size: 14px; margin-top: 6px;">Select an experience from Studio or My Experiences to start scanning!</p>
-                            <button id="btn-start-scanner-idle" class="btn btn-primary" style="margin-top: 16px; max-width: 260px;">🚀 Start Scanner with Active AR</button>
+                            <h3 id="scanner-status-title">AR Scanner is Ready</h3>
+                            <p id="scanner-status-desc" style="font-size: 14px; margin-top: 6px;">Select an experience from Studio, or load a shared link created on another device!</p>
+                            
+                            <button id="btn-start-scanner-idle" class="btn btn-primary" style="margin-top: 16px; width: 100%;">🚀 Start Scanner with Active AR</button>
+
+                            <!-- Direct URL / Share Link Loader for Other Devices -->
+                            <div style="margin-top: 24px; padding: 16px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-md); text-align: left;">
+                                <label class="form-label" style="color: var(--primary-cyan); font-weight: 700;">🌐 Scan Experience Created on Another Device:</label>
+                                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Paste a shared WebAR link or raw GitHub pattern URL to load and scan immediately without uploading.</p>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="text" id="input-load-share-url" class="form-input" placeholder="Paste Share URL or Published Link here...">
+                                    <button id="btn-load-share-url" class="btn btn-outline" style="margin: 0; font-size: 13px;">⚡ Load Shared AR Experience & Scan</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- How to Scan Instructions Card -->
+                <div style="margin-top: 16px; padding: 16px; background: rgba(0, 242, 254, 0.05); border: 1px solid var(--border-glow); border-radius: var(--radius-md);">
+                    <h4 style="font-size: 15px; color: var(--primary-cyan); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        💡 How to Scan & View Your AR Video:
+                    </h4>
+                    <ol style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.6;">
+                        <li><strong>Standard phone camera apps WILL NOT WORK directly</strong> on the PNG file (AR markers are custom patterns, not standard QR codes).</li>
+                        <li><strong>Display or Print the PNG Marker:</strong> Open/download the <code>printable-marker-frame.png</code> and display it on your laptop screen, another phone screen, or print it out.</li>
+                        <li><strong>Open the WebAR Scanner:</strong> Open this WebAR app on your phone browser or PC, go to <strong>📷 AR Scanner</strong> tab, and click <strong>🚀 Start Scanner</strong>.</li>
+                        <li><strong>Point Camera at the PNG Picture:</strong> Point your scanner camera directly at the displayed/printed marker image. Your video will pop up and play over the picture!</li>
+                    </ol>
                 </div>
             </div>
         </section>
