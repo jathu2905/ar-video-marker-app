@@ -9,9 +9,10 @@ export class GitHubPublisher {
      */
     static async validateRepository(token, owner, repo) {
         const url = `https://api.github.com/repos/${owner}/${repo}`;
+        const authHeader = token.startsWith('Bearer ') || token.startsWith('token ') ? token : `Bearer ${token}`;
         const response = await fetch(url, {
             headers: {
-                'Authorization': `token ${token}`,
+                'Authorization': authHeader,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
@@ -30,12 +31,14 @@ export class GitHubPublisher {
     static async uploadFile({ token, owner, repo, branch = 'main', path, content, isBase64 = false, message }) {
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
+        const authHeader = token.startsWith('Bearer ') || token.startsWith('token ') ? token : `Bearer ${token}`;
+
         // Get existing file SHA if updating an existing file
         let existingSha = null;
         try {
             const checkRes = await fetch(`${apiUrl}?ref=${branch}`, {
                 headers: {
-                    'Authorization': `token ${token}`,
+                    'Authorization': authHeader,
                     'Accept': 'application/vnd.github.v3+json'
                 }
             });
@@ -72,7 +75,7 @@ export class GitHubPublisher {
         const uploadRes = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${token}`,
+                'Authorization': authHeader,
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json'
             },
